@@ -1,0 +1,106 @@
+
+#include <stdint.h>
+#include <stdio.h>
+#define RCC_AHB1ENR (*(volatile uint32_t*) 0x40023830)
+#define RCC_APB2ENR (*(volatile uint32_t*) 0x40023844)
+#define RCC_APB1ENR (*(volatile uint32_t*) 0x40023840)
+
+#define GPIOA_MODER (*(volatile uint32_t*) 0x40020000)
+#define GPIOA_AFRL  (*(volatile uint32_t*) 0x40020020)
+
+#define ADC_SR   (*(volatile uint32_t*) 0x40012000)
+#define ADC_CR2  (*(volatile uint32_t*) 0x40012008)
+#define ADC_SMPR2 (*(volatile uint32_t*) 0x40012010)
+#define ADC_SQR3 (*(volatile uint32_t*) 0x40012034)
+#define ADC_DR   (*(volatile uint32_t*) 0x4001204C)
+
+
+#define USART2_SR       (*(volatile uint32_t*) 0x40004400)
+#define USART2_DR       (*(volatile uint32_t*) 0x40004404)
+#define USART2_BRR      (*(volatile uint32_t*) 0x40004408)
+#define USART2_CR1      (*(volatile uint32_t*) 0x4000440C)
+
+void UART2_Init(void)
+{
+    RCC_AHB1ENR |= (1 << 0);
+     RCC_APB1ENR |= (1 << 17);
+
+     GPIOA_MODER &= ~(3 << 4);
+    GPIOA_MODER |= (2 << 4);
+    GPIOA_MODER &= ~(3 << 6);
+    GPIOA_MODER |= (2 << 6);
+
+    GPIOA_AFRL |= (7 << 8);
+
+    GPIOA_AFRL |= (7 << 12);
+
+    USART2_BRR = 0x0683;
+
+    USART2_CR1 |= (1 << 3);
+    USART2_CR1 |= (1 << 2);
+    USART2_CR1 |= (1 << 13);
+}
+
+
+void UART2_Transmit(char c)
+{
+    while (!(USART2_SR & (1 << 7)));
+    USART2_DR = c;
+}
+void init_ADC(){
+
+	RCC_AHB1ENR |=(1<<0);
+	RCC_APB2ENR |=(1<<8);
+
+
+	GPIOA_MODER |=(3<<0);
+
+	ADC_SQR3=0;
+	ADC_SMPR2|=(7<<0);
+
+	ADC_CR2|=(1<<0);
+
+}
+
+uint16_t adc_read()
+{
+	ADC_CR2|=(1<<30);
+	while(!(ADC_SR & (1<<1))){
+
+	}
+			return ADC_DR;
+}
+
+int main(void)
+{
+	UART2_Init();
+	init_ADC();
+
+
+	 char ch[30];
+while(1)
+{
+	 uint16_t adc_value = adc_read();
+
+	 uint32_t voltage;
+
+	 voltage = (adc_value * 3300) / 4095;
+
+	 int integer = voltage / 1000;
+	 int decimal = (voltage % 1000) / 10;
+
+
+	sprintf(ch,"adc_value=%d.%d C\n",integer,decimal);
+
+	for(int i=0;ch[i]!='\0';i++)
+	{
+
+		UART2_Transmit(ch[i]);
+
+	}
+
+
+}
+
+
+}
