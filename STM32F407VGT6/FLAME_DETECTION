@@ -1,0 +1,78 @@
+//Flame Detection System with Custom Peripheral Drivers
+#include <stdint.h>
+#include "stm32f4xx.h"
+#include "gpio.h"
+#include "i2c.h"
+
+uint8_t SLAVE_ADD = 0x27;
+void delay()
+{
+	for(int i=0;i<5000000;i++);
+}
+
+
+void I2C1_start()
+{
+	while(I2C1->SR2 & (1<<1));
+	I2C1->CR1 |=(1<<8);
+	while(!(I2C1->SR1 & (1<<0)));
+	I2C1->DR= (SLAVE_ADD<<1)|0;
+	while(!(I2C1->SR1 & (1<<1)));
+	(void)I2C1->SR1;
+	(void)I2C1->SR2;
+}
+void I2C1_write(uint32_t data)
+{
+	I2C1->DR=data;
+	while(!(I2C1->SR1 & (1<<7)));
+
+	while(!(I2C1->SR1 & (1<<2)));
+
+}
+void I2C1_stop()
+{
+	I2C1->CR1 |=(1<<9);
+
+}
+
+
+int main()
+{
+	GPIO_CLC_EN(GPIOA,1);
+	GPIO_CLC_EN(GPIOB,1);
+	I2C1_CLC_EN();
+
+	GPIOA_Init(GPIO_PIN_INP,0);
+	GPIOB_Init(GPIO_PIN_AF,6,1,0,1,4);
+	GPIOB_Init(GPIO_PIN_AF,7,1,0,1,4);
+
+
+
+	//cr1,cr2,ccr,trise
+	I2C1_init(1,16,80,17);
+
+	uint32_t fire_detection;
+
+		while(1)
+		{
+			if(GPIOA->IDR & (1<<0))
+			{
+				fire_detection=1;
+
+			}
+			else
+			{
+				fire_detection=0;
+			}
+
+
+			I2C1_start();
+
+			I2C1_write(fire_detection);
+			I2C1_stop();
+
+			for(int i=0;i<=500000;i++);
+
+		}
+}
+
