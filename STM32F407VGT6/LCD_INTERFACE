@@ -1,0 +1,129 @@
+
+#include <stdint.h>
+
+
+#define RCC_AHB1ENR   (*(volatile uint32_t*)0x40023830)
+#define RCC_APB1ENR   (*(volatile uint32_t*)0x40023840)
+#define GPIOA_MODER   (*(volatile uint32_t*)0x40020000)
+#define GPIOA_AFRL    (*(volatile uint32_t*)0x40020020)
+#define GPIOD_MODER   (*(volatile uint32_t*)0x40020C00)
+#define GPIOD_ODR     (*(volatile uint32_t*)0x40020C14)
+
+#define USART2_SR       (*(volatile uint32_t*) 0x40004400)
+#define USART2_DR       (*(volatile uint32_t*) 0x40004404)
+#define USART2_BRR      (*(volatile uint32_t*) 0x40004408)
+#define USART2_CR1      (*(volatile uint32_t*) 0x4000440C)
+
+void delay(unsigned int t)
+{
+   while(t--);
+}
+
+void UART_Init(void)
+{
+    RCC_AHB1ENR |= (1<<0);
+    RCC_APB1ENR |= (1<<17);
+
+    GPIOA_MODER &= ~((3<<(2*2)) | (3<<(3*2)));
+    GPIOA_MODER |=  ((2<<(2*2)) | (2<<(3*2)));
+
+    GPIOA_AFRL &= ~((0xF<<(2*4)) | (0xF<<(3*4)));
+    GPIOA_AFRL |=  ((7<<(2*4)) | (7<<(3*4)));
+
+    USART2_BRR = 0x0683;
+    USART2_CR1 |= (1<<3);
+    USART2_CR1 |= (1<<2);
+    USART2_CR1 |= (1<<13);
+}
+char usart_receviewd(){
+
+	 while(!(USART2_SR & (1<<5)));
+	  return  USART2_DR;
+
+}
+
+void LCD_Enable()
+{
+	GPIOD_ODR|=(1<<1);
+	delay(1);
+	GPIOD_ODR &=~(1<<1);
+	delay(1);
+
+
+}
+void LCD_Send4(unsigned char data)
+{
+
+	GPIOD_ODR &= ~(0xF << 2);
+	    GPIOD_ODR |= ((data & 0x0F) << 2);
+	    LCD_Enable();
+
+}
+void LCD_Cmd(unsigned int ch)
+{
+
+	GPIOD_ODR &=~(1<<0);
+	LCD_Send4(ch>>4);
+	LCD_Send4(ch & 0x0f);
+	delay(2000);
+
+}
+
+void LCD_Init(void)
+{
+
+    RCC_AHB1ENR |= (1<<3);
+
+
+    GPIOD_MODER &= ~( (3<<(0*2)) |(3<<(1*2)) |(3<<(2*2)) |(3<<(3*2)) | (3<<(4*2)) | (3<<(5*2)) );
+
+    GPIOD_MODER |= ((1<<(0*2)) |(1<<(1*2)) |(1<<(2*2)) |(1<<(3*2)) |(1<<(4*2)) |(1<<(5*2)));
+
+    delay(1000000);
+
+
+    LCD_Send4(0x03);
+    delay(100000);
+
+    LCD_Send4(0x03);
+    delay(100000);
+
+    LCD_Send4(0x03);
+    delay(100000);
+
+    LCD_Send4(0x02);
+
+    LCD_Cmd(0x28);
+    LCD_Cmd(0x0C);
+    LCD_Cmd(0x06);
+    LCD_Cmd(0x01);
+}
+
+
+void Load_data(unsigned char data)
+{
+	GPIOD_ODR |=(1<<0);
+		LCD_Send4(data>>4);
+		LCD_Send4(data & 0x0F);
+		delay(20000);
+}
+
+
+int main(void)
+{
+	UART_Init();
+    LCD_Init();
+
+    LCD_Cmd(0x80);
+
+
+
+
+    while(1){
+    	char data=usart_receviewd();
+
+    	    	Load_data(data);
+
+
+    }
+}
