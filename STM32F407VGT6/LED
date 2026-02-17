@@ -1,0 +1,63 @@
+
+#include <stdint.h>
+#include <LED.H>
+
+#define GPIOD_MODER (*(volatile unsigned int*) 0x40020c00)
+#define GPIOD_ODR (*(volatile unsigned int*) 0x40020c14)
+
+#define RCC_APB1ENR (*(volatile unsigned int*) 0x40023840)
+#define TIM2_PSC (*(volatile unsigned int*) 0x40000028)
+#define TIM2_ARR (*(volatile unsigned int*) 0x4000002C)
+#define TIM2_CNT (*(volatile unsigned int*) 0x40000024)
+#define TIM2_CR1 (*(volatile unsigned int*) 0x40000000)
+#define TIM2_SR (*(volatile unsigned int*) 0x40000010)
+
+
+
+void delay(unsigned int m)
+{
+
+	unsigned int i;
+	for(i=0;i<m;i++)
+	{
+		TIM2_CNT =0;
+		TIM2_SR &=~(1<<0);
+		 TIM2_CR1 |=(1<<0);
+		while(!(TIM2_SR&(1<<0)));
+
+		TIM2_CR1 &=~(1<<0);
+
+
+	}
+}
+
+int main(void)
+{
+
+	RCC_AHB1ENR *AHB1EN=((RCC_AHB1ENR*)0X40023830) ;
+	AHB1EN->GPIODEN |=(1<<0);
+
+	    RCC_AHB1ENR |= (1<<3);
+	    RCC_APB1ENR |=(1<<0);
+	    TIM2_PSC =16-1;
+	    TIM2_ARR =10-1;
+
+
+	    GPIOD_MODER &= ~(3 << (12 * 2));
+
+	    GPIOD_MODER |=  (1 << (12 * 2));
+
+	    while(1)
+	    {
+
+	        GPIOD_ODR &= ~(1 << 12);
+
+	        delay(1);
+	        GPIOD_ODR |=(1 << 12);
+
+	       	        delay(4);
+	    }
+
+
+
+}
